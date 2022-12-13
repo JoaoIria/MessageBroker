@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include "betterassert.h"
 
@@ -242,10 +243,6 @@ int tfs_unlink(char const *target) {
 }
 
 int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
-    (void)source_path;
-    (void)dest_path;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
     FILE * f1;
     int f2;
     char buffer[128];
@@ -255,26 +252,20 @@ int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
     if(f1 == NULL){
         return -1;
     }
+
+    f2 = tfs_open(dest_path,TFS_O_CREAT|TFS_O_TRUNC|O_WRONLY);
+    if(f2 == -1){
+        return -1;
+    }
+
     size_t bytes_read = fread(buffer, sizeof *buffer, sizeof(buffer), f1);
-    while ((!EOF)){
-        bytes_read += fread(buffer, sizeof *buffer, sizeof(buffer), f1);
-    }
-
-    if(dest_path == NULL){
-        f2 = tfs_open(dest_path,TFS_O_CREAT);
-        int inum = inode_create(T_FILE);
-        if (inum == -1) {
-            return -1; // no free slots in inode table
-        }
+    tfs_write(f2,buffer,bytes_read);
+    while(!feof(f1)){
+        bytes_read = fread(buffer, sizeof *buffer, sizeof(buffer), f1);
         tfs_write(f2,buffer,bytes_read);
-        tfs_close(f2);
-    }else{
-        f2 = tfs_open(dest_path,TFS_O_APPEND);
-        tfs_write(f2,buffer,bytes_read);
-        tfs_close(f2);
     }
-
+    
+    tfs_close(f2);
     fclose(f1);
     return 0;
-    PANIC("TODO: tfs_copy_from_external_fs");
 }
