@@ -214,12 +214,13 @@ int inode_create(inode_type i_type) {
             // ensure fields are initialized
             inode->i_size = 0;
             inode->i_data_block = -1;
+            inode->i_counter = 0;
 
             // run regular deletion process
             inode_delete(inumber);
             return -1;
         }
-
+        inode_table[inumber].i_counter = 1;
         inode_table[inumber].i_size = BLOCK_SIZE;
         inode_table[inumber].i_data_block = b;
 
@@ -233,9 +234,25 @@ int inode_create(inode_type i_type) {
     } break;
     case T_FILE:
         // In case of a new file, simply sets its size to 0
+        inode_table[inumber].i_counter = 1;
         inode_table[inumber].i_size = 0;
         inode_table[inumber].i_data_block = -1;
         break;
+    case T_SOFTLINK: {
+        int b = data_block_alloc();
+        if (b == -1) {
+            // ensure fields are initialized
+            inode->i_size = 0;
+            inode->i_data_block = -1;
+
+            // run regular deletion process
+            inode_delete(inumber);
+            return -1;
+        }
+        inode_table[inumber].i_counter = 0;
+        inode_table[inumber].i_size = 0;
+        inode_table[inumber].i_data_block = b;
+    }break;
     default:
         PANIC("inode_create: unknown file type");
     }
@@ -375,7 +392,6 @@ int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
 int find_in_dir(inode_t const *inode, char const *sub_name) {
     ALWAYS_ASSERT(inode != NULL, "find_in_dir: inode must be non-NULL");
     ALWAYS_ASSERT(sub_name != NULL, "find_in_dir: sub_name must be non-NULL");
-
     insert_delay(); // simulate storage access delay to inode with inumber
     if (inode->i_node_type != T_DIRECTORY) {
         return -1; // not a directory
