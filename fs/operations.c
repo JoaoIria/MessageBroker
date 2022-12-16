@@ -92,6 +92,14 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
         ALWAYS_ASSERT(inode != NULL,
                       "tfs_open: directory files must have an inode");
 
+        if(inode->i_node_type == T_SOFTLINK){
+            char *block = data_block_get(inode->i_data_block);
+            if(block == NULL){
+                return -1;
+            }
+            return tfs_open(block,mode);
+        }
+        
         // Truncate (if requested)
         if (mode & TFS_O_TRUNC) {
             if (inode->i_size > 0) {
@@ -134,15 +142,31 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
 }
 
 int tfs_sym_link(char const *target, char const *link_name) {
-    (void)target;
-    (void)link_name;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
-
-    PANIC("TODO: tfs_sym_link");
+    link_name++; /* Andar caracter para a frente para tirar a barra inicial */
+    inode_t * inode_dir, *inode_soft;
+    static int inumber_f,verify_l,verify_add,inumber_soft;
+    inumber_soft = inode_create(T_SOFTLINK);
+    inode_dir = inode_get(0);
+    inode_soft = inode_get(inumber_soft);
+    inumber_f = tfs_lookup(target,inode_dir);
+    if(inumber_f == -1){
+        return -1;
+    }
+    verify_l = find_in_dir(inode_dir,link_name);
+    if(verify_l != -1){
+        return -1;
+    }
+    char *block = data_block_get(inode_soft->i_data_block);
+    strcpy(block,target);
+    verify_add = add_dir_entry(inode_dir,link_name,inumber_soft);
+    if(verify_add == -1){
+        return -1;
+    }
+    return 0;
 }
 
 int tfs_link(char const *target, char const *link_name) {
+    link_name++;
     inode_t * inode_dir, * inode_file;
     static int inumber_f,verify_l,verify_add;
     inode_dir = inode_get(0);
@@ -154,7 +178,6 @@ int tfs_link(char const *target, char const *link_name) {
     if(inode_file->i_node_type == T_SOFTLINK){
         return -1;
     }
-    link_name++;
     verify_l = find_in_dir(inode_dir,link_name);
     if(verify_l != -1){
         return -1;
