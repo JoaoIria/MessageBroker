@@ -99,7 +99,7 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
             }
             return tfs_open(block,mode);
         }
-        
+
         // Truncate (if requested)
         if (mode & TFS_O_TRUNC) {
             if (inode->i_size > 0) {
@@ -275,11 +275,30 @@ ssize_t tfs_read(int fhandle, void *buffer, size_t len) {
 }
 
 int tfs_unlink(char const *target) {
-    (void)target;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
-
-    PANIC("TODO: tfs_unlink");
+    inode_t * inode_dir, * inode_file;
+    static int inumber_f,verify = 0;
+    inode_dir = inode_get(0);
+    inumber_f = tfs_lookup(target,inode_dir);
+    if(inumber_f == -1){
+        return -1;
+    }
+    inode_file = inode_get(inumber_f);
+    /*printf("OIIIIIIIII %d",inode_file->i_node_type);*/
+    if(inode_file == NULL){
+        return -1;
+    }
+    if(inode_file->i_node_type == T_SOFTLINK){
+        inode_delete(inumber_f);
+        clear_dir_entry(inode_dir,++target);
+    }
+    if(inode_file->i_node_type == T_FILE){
+        verify = clear_dir_entry(inode_dir,++target);
+        inode_file->i_counter --;
+        if(inode_file->i_counter == 0){
+            inode_delete(inumber_f);
+        }
+    }    
+    return verify;
 }
 
 int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
