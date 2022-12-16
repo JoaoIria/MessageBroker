@@ -283,7 +283,6 @@ int tfs_unlink(char const *target) {
         return -1;
     }
     inode_file = inode_get(inumber_f);
-    /*printf("OIIIIIIIII %d",inode_file->i_node_type);*/
     if(inode_file == NULL){
         return -1;
     }
