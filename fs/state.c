@@ -8,10 +8,11 @@
 #include <unistd.h>
 #include <pthread.h>
 
-pthread_mutex_t data_block_lock;
-pthread_mutex_t f_lock;
-pthread_rwlock_t rwlock;
-pthread_mutex_t mlock;
+/* GLOBAL VARIABLES */
+pthread_mutex_t data_block_lock; /* lock for functions that use data blocks */
+pthread_mutex_t f_lock; /* lock for functions that use files */
+pthread_rwlock_t rwlock; /* lock for functions write and read */
+pthread_mutex_t mlock; /* global mutex lock */
 
 /*
  * Persistent FS state
@@ -114,12 +115,15 @@ int state_init(tfs_params params) {
     free_open_file_entries =
         malloc(MAX_OPEN_FILES * sizeof(allocation_state_t));
 
+
+    /*initialize all inode locks*/
     for (int i = 1; i < INODE_TABLE_SIZE; i++) {
         inode_aux = inode_get(i);
         pthread_mutex_init(&inode_aux->i_lock, NULL);
         pthread_rwlock_init(&inode_aux->i_rwlock, NULL);
     }
-
+ 
+    /*initialize all global locks*/
     pthread_mutex_init(&data_block_lock, NULL);
     pthread_mutex_init(&f_lock, NULL);
     pthread_mutex_init(&mlock, NULL);
@@ -154,12 +158,14 @@ int state_init(tfs_params params) {
 int state_destroy(void) {
     inode_t * inode_aux;
 
+    /*destroy all inode locks*/
     for (int i = 1; i < INODE_TABLE_SIZE; i++) {
         inode_aux = inode_get(i);
         pthread_mutex_destroy(&inode_aux->i_lock);
         pthread_rwlock_destroy(&inode_aux->i_rwlock);
     }
 
+    /*destroy all global locks*/
     pthread_mutex_destroy(&data_block_lock);
     pthread_mutex_destroy(&f_lock);
     pthread_mutex_destroy(&mlock);

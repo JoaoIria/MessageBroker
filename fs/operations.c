@@ -9,8 +9,8 @@
 #include "betterassert.h"
 #include <pthread.h>
 
-extern pthread_rwlock_t rwlock;
-extern pthread_mutex_t mlock;
+extern pthread_rwlock_t rwlock; /* lock for functions write and read, from other file*/
+extern pthread_mutex_t mlock; /* lock for functions write and read, from other file*/
 
 tfs_params tfs_default_params() {
     tfs_params params = {
@@ -23,9 +23,6 @@ tfs_params tfs_default_params() {
 }
 
 int tfs_init(tfs_params const *params_ptr) {
-    /*pthread_mutex_init(&mlock, NULL);
-    pthread_rwlock_init(&rwlock, NULL);*/
-
     tfs_params params;
     if (params_ptr != NULL) {
         params = *params_ptr;
@@ -154,51 +151,52 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
 }
 
 int tfs_sym_link(char const *target, char const *link_name) {
-    link_name++; /* Andar caracter para a frente para tirar a barra inicial */
+    link_name++; /* method to remove the "/"*/
     inode_t * inode_dir, *inode_soft;
     static int inumber_f,verify_l,verify_add,inumber_soft;
-    inumber_soft = inode_create(T_SOFTLINK);
-    inode_dir = inode_get(0);
-    inode_soft = inode_get(inumber_soft);
-    inumber_f = tfs_lookup(target,inode_dir);
+    inumber_soft = inode_create(T_SOFTLINK); /*Creates a SOFTLINK*/
+    inode_dir = inode_get(0); /* get the inode of the directory*/
+    inode_soft = inode_get(inumber_soft); /* gets the pointer to the inode */
+    inumber_f = tfs_lookup(target,inode_dir); /* get the target inumber */
     if(inumber_f == -1){
+        /*if the target inode does not exist */
         return -1;
     }
     verify_l = find_in_dir(inode_dir,link_name);
-    if(verify_l != -1){
+    if(verify_l != -1){ /* if the name already exists gives error */
         return -1;
     }
-    char *block = data_block_get(inode_soft->i_data_block);
-    strcpy(block,target);
-    verify_add = add_dir_entry(inode_dir,link_name,inumber_soft);
+    char *block = data_block_get(inode_soft->i_data_block); /* gets the datablock from the created SOFTLINK */
+    strcpy(block,target); /* copys the terget's name to the SOFTLINK's data block */
+    verify_add = add_dir_entry(inode_dir,link_name,inumber_soft); /* adds the SOFTLINK to the directory */
     if(verify_add == -1){
-        return -1;
+        return -1; /* if can't add it to directory gives error */
     }
     return 0;
 }
 
 int tfs_link(char const *target, char const *link_name) {
-    link_name++;
+    link_name++; /* method to remove the "/"*/
     inode_t * inode_dir, * inode_file;
     static int inumber_f,verify_l,verify_add;
-    inode_dir = inode_get(0);
-    inumber_f = tfs_lookup(target,inode_dir);
-    if(inumber_f == -1){
+    inode_dir = inode_get(0); /* get the inode of the directory */
+    inumber_f = tfs_lookup(target,inode_dir); /* get the target inumber */
+    if(inumber_f == -1){ /* if target inumber doesnt exist */
         return -1;
     }
-    inode_file = inode_get(inumber_f);
+    inode_file = inode_get(inumber_f); /* if the inode is SOFTLINK gives error */
     if(inode_file->i_node_type == T_SOFTLINK){
         return -1;
     }
     verify_l = find_in_dir(inode_dir,link_name);
-    if(verify_l != -1){
+    if(verify_l != -1){  /* if the name already exists gives error */
         return -1;
     }
-    /*inode_file = inode_get(inumber_f);*/
-    verify_add = add_dir_entry(inode_dir,link_name,inumber_f);
-    if(verify_add == -1){
+    verify_add = add_dir_entry(inode_dir,link_name,inumber_f); /* add to the directory */
+    if(verify_add == -1){ /* if can't add it to directory gives error */
         return -1;
     }
+    /* increases the number of hard links */
     inode_file->i_counter++;
     return 0;
 }
@@ -295,22 +293,27 @@ ssize_t tfs_read(int fhandle, void *buffer, size_t len) {
 }
 
 int tfs_unlink(char const *target) {
+    /*From the target we get the inumber and we use lookup to verify if said target exists*/
     inode_t * inode_dir, * inode_file;
     static int inumber_f,verify = 0;
     inode_dir = inode_get(0);
     inumber_f = tfs_lookup(target,inode_dir);
     if(inumber_f == -1){
+        /*if the target does not exist in the directory returns -1*/
         return -1;
     }
     inode_file = inode_get(inumber_f);
     if(inode_file == NULL){
         return -1;
     }
+    /*Checks if the target is a SOFTLINK or a FILE*/
     if(inode_file->i_node_type == T_SOFTLINK){
+        /*deletes the SOFTLINK*/
         inode_delete(inumber_f);
         clear_dir_entry(inode_dir,++target);
     }
     if(inode_file->i_node_type == T_FILE){
+        /*Deletes the FILE, decrements the HARDLINK counter for the target and if the counter reaches 0 said target is also deleted*/
         verify = clear_dir_entry(inode_dir,++target);
         inode_file->i_counter --;
         if(inode_file->i_counter == 0){
@@ -321,28 +324,45 @@ int tfs_unlink(char const *target) {
 }
 
 int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
+
+    /*  valor de retorno caso o ficheiro exceda o tamanho do bloco é 0, uma vez que
+    no piazza o professor colocou que não faria diferença optamos por deixar esta opção*/
+
     FILE * f1;
     int f2;
     char buffer[128];
     memset(buffer,0,sizeof(buffer));
 
+    /* Opens source file for reading */
     f1 = fopen(source_path,"r");
+    /* See if it exists */
     if(f1 == NULL){
         return -1;
     }
 
+    /* Opens the destination file, with the CREATE mode, if it does not exist or 
+    TRUNC mode if it exists to be rewritten, with the option of read and write only  */
+    
     f2 = tfs_open(dest_path,TFS_O_CREAT|TFS_O_TRUNC|O_WRONLY);
+    
+    /* check if it was possible to perform the action*/
     if(f2 == -1){
         return -1;
     }
 
+    /* fill the buffer and copy to destination */
     size_t bytes_read = fread(buffer, sizeof *buffer, sizeof(buffer), f1);
     tfs_write(f2,buffer,bytes_read);
+
+    /* if the file is not over yet, while it is not over, refill the buffer and copy 
+    to destination */
+
     while(!feof(f1)){
         bytes_read = fread(buffer, sizeof *buffer, sizeof(buffer), f1);
         tfs_write(f2,buffer,bytes_read);
     }
     
+    /* close all files */
     tfs_close(f2);
     fclose(f1);
     return 0;
