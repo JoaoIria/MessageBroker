@@ -27,6 +27,8 @@ typedef struct {
     size_t i_size;
     int i_data_block;
     int i_counter;
+    pthread_mutex_t i_lock;
+    pthread_rwlock_t i_rwlock;
     // in a more complete FS, more fields could exist here
 } inode_t;
 
