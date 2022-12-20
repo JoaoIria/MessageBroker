@@ -8,10 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-
-/* GLOBAL VARIABLES 
-pthread_rwlock_t rwlock;
-pthread_mutex_t mlock;*/
+#include <pthread.h>
 
 /**
  * Directory entry

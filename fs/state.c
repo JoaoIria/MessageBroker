@@ -8,15 +8,17 @@
 #include <unistd.h>
 #include <pthread.h>
 
+pthread_mutex_t data_block_lock;
+pthread_mutex_t f_lock;
+pthread_rwlock_t rwlock;
+pthread_mutex_t mlock;
+
 /*
  * Persistent FS state
  * (in reality, it should be maintained in secondary memory;
  * for simplicity, this project maintains it in primary memory).
  */
 static tfs_params fs_params;
-
-pthread_mutex_t data_block_lock;
-pthread_mutex_t f_lock;
 
 // Inode table
 static inode_t *inode_table;
@@ -97,6 +99,7 @@ static void insert_delay(void) {
  *   - malloc failure when allocating TFS structures.
  */
 int state_init(tfs_params params) {
+    inode_t * inode_aux;
     fs_params = params;
 
     if (inode_table != NULL) {
@@ -111,13 +114,17 @@ int state_init(tfs_params params) {
     free_open_file_entries =
         malloc(MAX_OPEN_FILES * sizeof(allocation_state_t));
 
-    for (size_t i = 0; i < INODE_TABLE_SIZE; i++) {
-        pthread_mutex_init(&inode_table->i_lock, NULL);
-        pthread_rwlock_init(&inode_table->i_rwlock, NULL);
+    for (int i = 1; i < INODE_TABLE_SIZE; i++) {
+        inode_aux = inode_get(i);
+        pthread_mutex_init(&inode_aux->i_lock, NULL);
+        pthread_rwlock_init(&inode_aux->i_rwlock, NULL);
     }
 
-    /*pthread_mutex_init(&mlock, NULL);
-    pthread_rwlock_init(&rwlock, NULL);*/
+    pthread_mutex_init(&data_block_lock, NULL);
+    pthread_mutex_init(&f_lock, NULL);
+    pthread_mutex_init(&mlock, NULL);
+    pthread_rwlock_init(&rwlock, NULL);
+    
 
     if (!inode_table || !freeinode_ts || !fs_data || !free_blocks ||
         !open_file_table || !free_open_file_entries) {
@@ -145,6 +152,19 @@ int state_init(tfs_params params) {
  * Returns 0 if succesful, -1 otherwise.
  */
 int state_destroy(void) {
+    inode_t * inode_aux;
+
+    for (int i = 1; i < INODE_TABLE_SIZE; i++) {
+        inode_aux = inode_get(i);
+        pthread_mutex_destroy(&inode_aux->i_lock);
+        pthread_rwlock_destroy(&inode_aux->i_rwlock);
+    }
+
+    pthread_mutex_destroy(&data_block_lock);
+    pthread_mutex_destroy(&f_lock);
+    pthread_mutex_destroy(&mlock);
+    pthread_rwlock_destroy(&rwlock);
+
     free(inode_table);
     free(freeinode_ts);
     free(fs_data);
@@ -467,11 +487,14 @@ int data_block_alloc(void) {
             insert_delay(); // simulate storage access delay to free_blocks
         }
 
+        pthread_mutex_lock(&data_block_lock);
 
         if (free_blocks[i] == FREE) {
             free_blocks[i] = TAKEN;
+            pthread_mutex_unlock(&data_block_lock);
             return (int)i;
         }
+        pthread_mutex_unlock(&data_block_lock);
     }
     return -1;
 }
@@ -488,7 +511,11 @@ void data_block_free(int block_number) {
 
     insert_delay(); // simulate storage access delay to free_blocks
 
+    pthread_mutex_lock(&data_block_lock);
+
     free_blocks[block_number] = FREE;
+
+    pthread_mutex_unlock(&data_block_lock);
 }
 
 /**
