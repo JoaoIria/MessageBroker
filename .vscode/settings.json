@@ -3,7 +3,8 @@
     "string.h": "c",
     "state.h": "c",
     "betterassert.h": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "operations.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

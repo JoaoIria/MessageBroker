@@ -111,6 +111,14 @@ int state_init(tfs_params params) {
     free_open_file_entries =
         malloc(MAX_OPEN_FILES * sizeof(allocation_state_t));
 
+    for (size_t i = 0; i < INODE_TABLE_SIZE; i++) {
+        pthread_mutex_init(&inode_table->i_lock, NULL);
+        pthread_rwlock_init(&inode_table->i_rwlock, NULL);
+    }
+
+    /*pthread_mutex_init(&mlock, NULL);
+    pthread_rwlock_init(&rwlock, NULL);*/
+
     if (!inode_table || !freeinode_ts || !fs_data || !free_blocks ||
         !open_file_table || !free_open_file_entries) {
         return -1; // allocation failed

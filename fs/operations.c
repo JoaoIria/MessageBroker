@@ -9,7 +9,6 @@
 #include "betterassert.h"
 #include <pthread.h>
 
-/* GLOBAL VARIABLES */
 pthread_rwlock_t rwlock;
 pthread_mutex_t mlock;
 
@@ -24,6 +23,9 @@ tfs_params tfs_default_params() {
 }
 
 int tfs_init(tfs_params const *params_ptr) {
+    pthread_mutex_init(&mlock, NULL);
+    pthread_rwlock_init(&rwlock, NULL);
+    
     tfs_params params;
     if (params_ptr != NULL) {
         params = *params_ptr;
