@@ -6,8 +6,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-
 #include "betterassert.h"
+#include <pthread.h>
+
+/* GLOBAL VARIABLES */
+int readcnt = 0; /* initially 0 */
+pthread_mutex_t counter_lock, write_lock;
+
+void lock_for_reading(void){
+    pthread_mutex_lock(&counter_lock);
+    readcnt ++;
+    if(readcnt == 1){
+        pthread_mutex_lock(&write_lock);
+    }
+    pthread_mutex_unlock(&counter_lock);
+}
+
+void unlock_for_reading(void){
+    pthread_mutex_lock(&counter_lock);
+    readcnt --;
+    if(readcnt == 0){
+        pthread_mutex_unlock(&write_lock);
+    }
+    pthread_mutex_unlock(&counter_lock);
+}
+
+void lock_for_writing(void){
+    pthread_mutex_lock(&write_lock);
+}
+
+void unlock_for_writing(void){
+    pthread_mutex_unlock(&write_lock);
+}
+
+
 
 tfs_params tfs_default_params() {
     tfs_params params = {
@@ -75,6 +107,7 @@ static int tfs_lookup(char const *name, inode_t const *root_inode) {
 }
 
 int tfs_open(char const *name, tfs_file_mode_t mode) {
+    
     // Checks if the path name is valid
     if (!valid_pathname(name)) {
         return -1;
@@ -203,6 +236,7 @@ int tfs_close(int fhandle) {
 }
 
 ssize_t tfs_write(int fhandle, void const *buffer, size_t to_write) {
+
     open_file_entry_t *file = get_open_file_entry(fhandle);
     if (file == NULL) {
         return -1;
@@ -233,6 +267,7 @@ ssize_t tfs_write(int fhandle, void const *buffer, size_t to_write) {
         ALWAYS_ASSERT(block != NULL, "tfs_write: data block deleted mid-write");
 
         // Perform the actual write
+        lock_for_writing();
         memcpy(block + file->of_offset, buffer, to_write);
 
         // The offset associated with the file handle is incremented accordingly
@@ -242,10 +277,12 @@ ssize_t tfs_write(int fhandle, void const *buffer, size_t to_write) {
         }
     }
 
+    unlock_for_writing();
     return (ssize_t)to_write;
 }
 
 ssize_t tfs_read(int fhandle, void *buffer, size_t len) {
+
     open_file_entry_t *file = get_open_file_entry(fhandle);
     if (file == NULL) {
         return -1;
@@ -266,11 +303,13 @@ ssize_t tfs_read(int fhandle, void *buffer, size_t len) {
         ALWAYS_ASSERT(block != NULL, "tfs_read: data block deleted mid-read");
 
         // Perform the actual read
+        lock_for_reading();
         memcpy(buffer, block + file->of_offset, to_read);
         // The offset associated with the file handle is incremented accordingly
         file->of_offset += to_read;
     }
 
+    unlock_for_reading();
     return (ssize_t)to_read;
 }
 
