@@ -87,12 +87,13 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
     inode_t *root_dir_inode = inode_get(ROOT_DIR_INUM);
     ALWAYS_ASSERT(root_dir_inode != NULL,
                   "tfs_open: root dir inode must exist");
+
+    pthread_mutex_lock(&mlock);
     int inum = tfs_lookup(name, root_dir_inode);
     size_t offset;
 
     if (inum >= 0) {
 
-        pthread_mutex_lock(&mlock);
         // The file already exists
         inode_t *inode = inode_get(inum);
         ALWAYS_ASSERT(inode != NULL,
@@ -138,6 +139,7 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
         pthread_mutex_unlock(&mlock);
         offset = 0;
     } else {
+        pthread_mutex_unlock(&mlock);
         return -1;
     }
 
