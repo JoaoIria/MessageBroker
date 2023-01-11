@@ -27,11 +27,9 @@ int main(int argc, char **argv) {
         return -1;
     }
     
-    for(i = 0; i < max_sessions; i++){
-        if (read(fd, &buffer[i], sizeof(int))== -1){
-            return -1;
-        }
-        
+    if (read(fd, &buffer[i], sizeof(int))== -1){
+        return -1;
+
     }
     close(fd);
 
