@@ -7,7 +7,9 @@
     "operations.h": "c",
     "stdbool.h": "c",
     "stdio.h": "c",
-    "unistd.h": "c"
+    "unistd.h": "c",
+    "logging.h": "c",
+    "fcntl.h": "c"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",
