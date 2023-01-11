@@ -1,5 +1,7 @@
 #include "logging.h"
+#include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 char msg[] = "mensagem de teste";
 char buffer[1024];
@@ -9,31 +11,29 @@ int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
-    int p[2];
-    if(pipe(p) == -1){
-        return -1;
-    }
+    int max_sessions;
+    char register_pipe_name[1024];
+    int i;
 
-    int id = fork();
-    if(id == -1){
+    strcpy(register_pipe_name, argv[1]);
+    max_sessions = atoi(argv[2]);
+
+    printf("%s %d",register_pipe_name, max_sessions);
+
+    mkfifo(register_pipe_name, max_sessions);
+    int fd = open(register_pipe_name, O_RDONLY);
+     
+    if (fd == -1){
         return -1;
     }
-    /* CHILD PROCESS */
-    if(id == 0){
-        close(p[0]);
-        if (write(p[1],msg,sizeof(msg)) == -1){
+    
+    for(i = 0; i < max_sessions; i++){
+        if (read(fd, &buffer[i], sizeof(int))== -1){
             return -1;
         }
-        close(p[1]);
-    /* PARENT PROCESS */
-    }else{
-        close(p[1]);
-        if (read(p[0],buffer,sizeof(msg)) == -1){
-            return -1;
-        }
-        close(p[0]);
-        printf("Got from child process -> %s\n", buffer);
+        
     }
+    close(fd);
 
     return 0;
 }
