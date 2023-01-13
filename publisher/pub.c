@@ -1,3 +1,4 @@
+#include "logging.h"
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -13,6 +14,8 @@ int main(int argc, char **argv) {
     const char* register_pipe_name = argv[1];
     const char* session_pipe_name = argv[2];
     const char* box_name = argv[3];
+    __uint8_t i;
+    /*int aux = sizeof(i) + sizeof(session_pipe_name) + sizeof(box_name);*/
 
     /* open the register pipe for writing */
     int register_pipe_fd = open(register_pipe_name, O_WRONLY);
@@ -23,28 +26,47 @@ int main(int argc, char **argv) {
     }
 
     /* format message to send to mbroker */
-    char message = "[ code = 9 (uint8_t) ] | [ message (char[1024]) ]";
+    i = 1;
+    const void* message_broker[3];
+    message_broker[0] = &i;
+    message_broker[1] = session_pipe_name;
+    message_broker[2] = box_name; /* Mudar para o original*/
 
-    /* send the message to the mbroker via the register pipe */
-    write(register_pipe_fd, message, strlen(message));
+    /* send the message to the mbroker via the registser pipe */
+    ssize_t flg1 = write(register_pipe_fd, message_broker, sizeof(message_broker));
+    if(flg1 == -1){
+        return -1;
+    }
     close(register_pipe_fd);
 
 
-    /* open the session pipe for writing 
+    /* open the session pipe for writing */ 
     int session_pipe_fd = open(session_pipe_name, O_WRONLY);
-    /* check for error opening the session pipe 
+    /* check for error opening the session pipe */
     if (session_pipe_fd < 0) {
         printf("Error opening session pipe\n");
         return -1;
     }
 
-    /* publisher can now write messages to the session pipe 
+    /* publisher can now write messages to the session pipe */
     while(1){
+        i = 9;
         char msg[512];
         printf("Enter the message to publish:");
-        scanf("%s", msg);
-        write(session_pipe_fd, msg, strlen(msg));
+        if(scanf("%s", msg)==1){
+            continue;
+        }
+        else{
+            return -1;
+        }
+        void * message_user[2];
+        message_user[0] = &i;
+        message_user[0] = msg;
+        ssize_t flg2 = write(session_pipe_fd, message_user, sizeof(message_user));
+        if(flg2 == -1){
+            return -1;
+        }
     }
-    close(session_pipe_fd);*/
+    close(session_pipe_fd);
     return 0;
 }

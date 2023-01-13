@@ -5,12 +5,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 
-#define MAX_THREADS 100 /* 100 for example, but can change */
+/*#define MAX_THREADS 100  tirar */
 
-const char* register_pipe_name;
+char* register_pipe_name;
 int max_sessions;
-pthread_t session_threads[MAX_THREADS];
 int num_threads = 0;
 pthread_mutex_t mb_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -21,7 +21,7 @@ void* session_handler(void* session_pipe_name) {
     /* Initializes a user session */
 
     close(fd);
-    free((void*) pipe_name);
+    /*free((void*) pipe_name);*/
     pthread_mutex_lock(&mb_mutex);
     num_threads--;
     pthread_mutex_unlock(&mb_mutex);
@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
 
     strcpy(register_pipe_name,argv[1]);
     max_sessions = atoi(argv[2]);
+    pthread_t session_threads[max_sessions];
 
     if (mkfifo(register_pipe_name, 0666) < 0) {
         printf("Error creating register pipe\n"); /*tirar*/
@@ -50,7 +51,7 @@ int main(int argc, char **argv) {
 
     while (1) {
         char session_pipe_name[256];
-        int n = read(fd, session_pipe_name, sizeof(session_pipe_name));
+        ssize_t n = read(fd, session_pipe_name, sizeof(session_pipe_name));
         if (n < 0) {
             continue;
         }
