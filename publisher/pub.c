@@ -30,20 +30,23 @@ int main(int argc, char **argv) {
     }
 
     /* format message to send to mbroker */
-    i = 1;
-    const void* message_broker[3];
+    /*i = 1;
+    memset tudo a zero
+    memcopy
+    const void * message_broker[3];
     message_broker[0] = &i;
     message_broker[1] = session_pipe_name;
-    message_broker[2] = box_name; 
+    message_broker[2] = box_name; */
+
+    char msg = 1;
 
     /* send the message to the mbroker via the register pipe */
-    ssize_t flg1 = write(register_pipe_fd, message_broker, sizeof(message_broker));
+    ssize_t flg1 = write(register_pipe_fd, &msg, sizeof(char));
     if(flg1 == -1){
         return -1;
     }
     close(register_pipe_fd);
-
-    printf("OK");
+    
     unlink(session_pipe_name);
 
     if (mkfifo(session_pipe_name, 0666) < 0) {
@@ -58,13 +61,12 @@ int main(int argc, char **argv) {
         printf("Error opening session pipe\n");
         return -1;
     }
-
     /* publisher can now write messages to the session pipe */
     while(!EOF){
         i = 9;
-        char msg[512];
+        char msg_2[512];
         printf("Enter the message to publish:");
-        if(scanf("%s", msg)==1){
+        if(scanf("%s", msg_2)==1){
             continue;
         }
         else{
@@ -72,7 +74,7 @@ int main(int argc, char **argv) {
         }
         void * message_user[2];
         message_user[0] = &i;
-        message_user[0] = msg;
+        message_user[0] = msg_2;
         ssize_t flg2 = write(session_pipe_fd, message_user, sizeof(message_user));
         if(flg2 == -1){
             return -1;
