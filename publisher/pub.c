@@ -85,10 +85,14 @@ int main(int argc, char **argv) {
 
     while(1){
         printf("Enter the message to publish:");
-        if(scanf("%s", msg)==1){
+        if (fgets(msg, 1024, stdin) == NULL || feof(stdin)) {
+            printf("\nEOF reached, closing session and pipe...\n");
+            close(session_pipe_fd);
+            return 0;
         }
-        else{
-            return -1;
+        int len = (int)strlen(msg);
+        if (len > 0 && msg[len-1] == '\n') {
+            msg[len-1] = '\0';
         }
         ssize_t flg2 = write(session_pipe_fd, msg, sizeof(msg));
         if(flg2 == -1){

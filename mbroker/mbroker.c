@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 
 /*typedef struct box{
     int id;
@@ -17,6 +18,35 @@ char box_name[32];
 char session_pipe_name[256];
 char* register_pipe_name;
 int max_sessions;
+char sv_order_msg[289];
+char msg[1024];
+
+
+void get_order(int fd){
+
+    memset(sv_order_msg,0,sizeof(sv_order_msg));
+    memset(session_pipe_name,0,sizeof(session_pipe_name));
+    memset(box_name,0,sizeof(box_name));
+    memset(msg,0,sizeof(msg));
+
+    char *token;
+    ssize_t n = read(fd, sv_order_msg, sizeof(sv_order_msg)-1);
+    /*if(n <= 0){
+        return;
+    }*/
+
+    printf("recebi %zu bytes\n", n);
+    printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
+    printf("res: %i\n", (int)sv_order_msg[0]);
+
+    token = strtok(sv_order_msg," ");
+    token = strtok(NULL, " "); // skipping the first token
+    strcpy(session_pipe_name, token);
+    token = strtok(NULL, " ");
+    strcpy(box_name, token);
+}
+
+
 
 int main(int argc, char **argv) {
 
@@ -46,38 +76,19 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    while (1) {
-        char *token;
-        char sv_order_msg[289];
-        ssize_t n = read(fd, sv_order_msg, sizeof(sv_order_msg));
-        if (n <= 0) {
-            continue;
-        }
-        printf("recebi %zu bytes\n", n);
-        printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
-        printf("res: %i\n", (int)sv_order_msg[0]);
+    get_order(fd);
 
+    while (1) {
         switch ((int)sv_order_msg[0]){
         case 1:
-            char msg[1024];
-            memset(session_pipe_name,0,sizeof(session_pipe_name));
-            memset(box_name,0,sizeof(box_name));
-            memset(msg,0,sizeof(msg));
-
-            token = strtok(sv_order_msg," ");
-            token = strtok(NULL, " "); // skipping the first token
-            strcpy(session_pipe_name, token);
-            token = strtok(NULL, " ");
-            strcpy(box_name, token);
-
             int session_pipe_fd = open(session_pipe_name, O_RDONLY);
             if (session_pipe_fd < 0) {
                 printf("Error opening session pipe\n");
             return -1;
             }
-            ssize_t flg = read(session_pipe_fd,msg,sizeof(session_pipe_fd));
-                if(flg == -1){
-            return -1;
+            ssize_t flg = read(session_pipe_fd,msg,1024);
+            if(flg == -1){
+                return -1;
             }
             printf("A Mensagem do user foi: %s \n", msg);
             break;
