@@ -58,6 +58,7 @@ ifneq ($(strip $(DEBUG)), no)
   CFLAGS += -g
 endif
 
+OPTIM=no
 # optional O3 optimization symbols: run make OPTIM=no to deactivate them
 ifeq ($(strip $(OPTIM)), no)
   CFLAGS += -O0

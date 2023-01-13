@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
@@ -15,6 +17,8 @@ int main(int argc, char **argv) {
     const char* session_pipe_name = argv[2];
     const char* box_name = argv[3];
     __uint8_t i;
+
+    printf("mbroker.register_pipe = '%s' session_pipe_name = '%s' box_name = '%s' \n",register_pipe_name, session_pipe_name,box_name);
     /*int aux = sizeof(i) + sizeof(session_pipe_name) + sizeof(box_name);*/
 
     /* open the register pipe for writing */
@@ -30,15 +34,22 @@ int main(int argc, char **argv) {
     const void* message_broker[3];
     message_broker[0] = &i;
     message_broker[1] = session_pipe_name;
-    message_broker[2] = box_name; /* Mudar para o original*/
+    message_broker[2] = box_name; 
 
-    /* send the message to the mbroker via the registser pipe */
+    /* send the message to the mbroker via the register pipe */
     ssize_t flg1 = write(register_pipe_fd, message_broker, sizeof(message_broker));
     if(flg1 == -1){
         return -1;
     }
     close(register_pipe_fd);
 
+    printf("OK");
+    unlink(session_pipe_name);
+
+    if (mkfifo(session_pipe_name, 0666) < 0) {
+        printf("Error creating session pipe\n"); 
+        return -1;
+    }
 
     /* open the session pipe for writing */ 
     int session_pipe_fd = open(session_pipe_name, O_WRONLY);
@@ -49,7 +60,7 @@ int main(int argc, char **argv) {
     }
 
     /* publisher can now write messages to the session pipe */
-    while(1){
+    while(!EOF){
         i = 9;
         char msg[512];
         printf("Enter the message to publish:");
@@ -68,5 +79,6 @@ int main(int argc, char **argv) {
         }
     }
     close(session_pipe_fd);
+    unlink(session_pipe_name);
     return 0;
 }
