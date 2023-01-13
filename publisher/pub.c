@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
+
     /* check for correct number of command line arguments */
     if (argc < 4) {
         printf("Usage: %s <register_pipe_name> <session_pipe_name> <box_name>\n", argv[0]);
@@ -19,7 +20,6 @@ int main(int argc, char **argv) {
     __uint8_t i;
 
     printf("mbroker.register_pipe = '%s' session_pipe_name = '%s' box_name = '%s' \n",register_pipe_name, session_pipe_name,box_name);
-    /*int aux = sizeof(i) + sizeof(session_pipe_name) + sizeof(box_name);*/
 
     /* open the register pipe for writing */
     int register_pipe_fd = open(register_pipe_name, O_WRONLY);
@@ -30,18 +30,35 @@ int main(int argc, char **argv) {
     }
 
     /* format message to send to mbroker */
-    /*i = 1;
-    memset tudo a zero
-    memcopy
-    const void * message_broker[3];
-    message_broker[0] = &i;
-    message_broker[1] = session_pipe_name;
-    message_broker[2] = box_name; */
 
-    char msg = 1;
+    i = 1;
+    char sv_order_msg[289];
+    memset(sv_order_msg, 0, sizeof(sv_order_msg));
+
+    // copy the value of i to the first byte of sv_order_msg
+    memcpy(sv_order_msg, &i, sizeof(__uint8_t)); 
+   
+    // add a space after i
+    memcpy(sv_order_msg + sizeof(__uint8_t), " ", sizeof(char)); 
+
+    // add session_pipe_name
+    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char), session_pipe_name, strlen(session_pipe_name)); 
+    
+    // add a space after session_pipe_name
+    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char) + strlen(session_pipe_name), " ", sizeof(char)); 
+
+    // add box_name
+    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char) * 2 + strlen(session_pipe_name), box_name, sizeof(char) * strlen(box_name)); 
+
+    // add null terminator
+    sv_order_msg[sizeof(__uint8_t) + sizeof(char) * 2 + strlen(session_pipe_name) + strlen(box_name)] = '\0'; // add null terminator
+    /*printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
+    printf("A mensagem enviada para o mbroker foi: %d\n", sv_order_msg[0]);*/
+
+
 
     /* send the message to the mbroker via the register pipe */
-    ssize_t flg1 = write(register_pipe_fd, &msg, sizeof(char));
+    ssize_t flg1 = write(register_pipe_fd, sv_order_msg, sizeof(sv_order_msg));
     if(flg1 == -1){
         return -1;
     }
@@ -62,20 +79,18 @@ int main(int argc, char **argv) {
         return -1;
     }
     /* publisher can now write messages to the session pipe */
-    while(!EOF){
-        i = 9;
-        char msg_2[512];
+
+    char msg[1024];
+    i = 9;
+
+    while(1){
         printf("Enter the message to publish:");
-        if(scanf("%s", msg_2)==1){
-            continue;
+        if(scanf("%s", msg)==1){
         }
         else{
             return -1;
         }
-        void * message_user[2];
-        message_user[0] = &i;
-        message_user[0] = msg_2;
-        ssize_t flg2 = write(session_pipe_fd, message_user, sizeof(message_user));
+        ssize_t flg2 = write(session_pipe_fd, msg, sizeof(msg));
         if(flg2 == -1){
             return -1;
         }
