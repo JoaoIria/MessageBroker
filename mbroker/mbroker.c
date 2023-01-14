@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
             printf("A Mensagem do user foi: %s \n", msg);
             break;
         default:
-            break;
+            break; /*get_order(fd);*/
         }
     }
     close(fd);
