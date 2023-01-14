@@ -1,4 +1,5 @@
 #include "logging.h"
+#include "messages.h"
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -31,32 +32,10 @@ int main(int argc, char **argv) {
     }
 
     /* format message to send to mbroker */
-
     i = 2;
     char sv_order_msg[289];
-    memset(sv_order_msg, 0, sizeof(sv_order_msg));
-
-    // copy the value of i to the first byte of sv_order_msg
-    memcpy(sv_order_msg, &i, sizeof(__uint8_t)); 
-   
-    // add a space after i
-    memcpy(sv_order_msg + sizeof(__uint8_t), " ", sizeof(char)); 
-
-    // add session_pipe_name
-    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char), session_pipe_name, strlen(session_pipe_name)); 
-    
-    // add a space after session_pipe_name
-    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char) + strlen(session_pipe_name), " ", sizeof(char)); 
-
-    // add box_name
-    memcpy(sv_order_msg + sizeof(__uint8_t) + sizeof(char) * 2 + strlen(session_pipe_name), box_name, sizeof(char) * strlen(box_name)); 
-
-    // add null terminator
-    sv_order_msg[sizeof(__uint8_t) + sizeof(char) * 2 + strlen(session_pipe_name) + strlen(box_name)] = '\0'; // add null terminator
-    /*printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
-    printf("A mensagem enviada para o mbroker foi: %d\n", sv_order_msg[0]);*/
-
-
+    memset(sv_order_msg,0,289);
+    strcpy(sv_order_msg,create_sv_order_msg(i,session_pipe_name,box_name));
 
     /* send the message to the mbroker via the register pipe */
     ssize_t flg1 = write(register_pipe_fd, sv_order_msg, sizeof(sv_order_msg));

@@ -1,4 +1,5 @@
 #include "logging.h"
+#include "messages.h"
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
@@ -23,7 +24,6 @@ char msg[1024];
 
 
 void get_order(int fd){
-
     memset(sv_order_msg,0,sizeof(sv_order_msg));
     memset(session_pipe_name,0,sizeof(session_pipe_name));
     memset(box_name,0,sizeof(box_name));
@@ -31,9 +31,9 @@ void get_order(int fd){
 
     char *token;
     ssize_t n = read(fd, sv_order_msg, sizeof(sv_order_msg)-1);
-    /*if(n <= 0){
+    if(n <= 0){
         return;
-    }*/
+    }
 
     printf("recebi %zu bytes\n", n);
     printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
@@ -46,10 +46,8 @@ void get_order(int fd){
     strcpy(box_name, token);
 }
 
-
-
 int main(int argc, char **argv) {
-
+    
     if (argc < 3) {
         return -1;
     }
@@ -91,6 +89,19 @@ int main(int argc, char **argv) {
                 return -1;
             }
             printf("A Mensagem do user foi: %s \n", msg);
+            break;
+        case 3:
+            int session_pipe_fd = open(session_pipe_name, O_WRONLY);
+            if (session_pipe_fd < 0) {
+                printf("Error opening session pipe\n");
+                return -1;
+            }
+            /* POR MUDARRRRR */
+            ssize_t flg = write(session_pipe_fd,msg,1024);
+            if(flg == -1){
+                return -1;
+            }
+            printf("A Mensagem enviada foi: %s \n", msg);
             break;
         default:
             break; /*get_order(fd);*/
