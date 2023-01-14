@@ -1,5 +1,5 @@
 #include "logging.h"
-#include "servermsg.h"
+#include "messages.h"
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
     __uint8_t i;
     int bytes_msg,flag = 1;
 
+    /* print to check all variables */
     printf("mbroker.register_pipe = '%s' session_pipe_name = '%s' box_name = '%s' action = '%s' \n",register_pipe_name, session_pipe_name,box_name,action);
 
     /* open the register pipe for writing */
@@ -92,7 +93,9 @@ int main(int argc, char **argv) {
         if(flg == -1){
             return -1;
         }
-        printf("%s \n",msg);
+        printf("codigo: %d \n",msg[0]);
+        printf("A Mensagem recebida foi: %s \n",msg);
+        break;
     }
     close(session_pipe_fd);
     unlink(session_pipe_name);

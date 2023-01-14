@@ -1,5 +1,6 @@
 #include "logging.h"
 #include "messages.h"
+#include "operations.h"
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
@@ -9,11 +10,19 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdint.h>
 
-/*typedef struct box{
+typedef struct box{
     int id;
-    char content;
-};*/
+    int pub_num;
+    int sub_num;
+}Box;
+
+struct box_array{
+    struct box * boxes;
+    int size;
+};
+
 
 char box_name[32];
 char session_pipe_name[256];
@@ -21,6 +30,79 @@ char* register_pipe_name;
 int max_sessions;
 char sv_order_msg[289];
 char msg[1024];
+char aswser_msg46[1029];
+char aswser_msg8[58];
+__uint8_t i;
+int32_t flag = 0;
+int s = 1;
+
+
+void create_box_array(struct box_array *arr, size_t  x) {
+    if(x == 0) {
+        arr->boxes = NULL;
+        arr->size = 0;
+    } else {
+        arr->boxes = malloc(x * sizeof(struct box));
+        arr->size = (int)x;
+    }
+}
+
+void increment_box_array(struct box_array *arr) {
+    if(arr->boxes == NULL) {
+        arr->boxes = malloc(sizeof(struct box));
+    } else {
+        arr->boxes = realloc(arr->boxes, (size_t)(arr->size + 1) * sizeof(struct box));
+    }
+    arr->size++;
+}
+
+void decrement_box_array(struct box_array *arr) {
+    if(arr->size > 0) {
+        arr->size--;
+        if(arr->size == 0) {
+            free(arr->boxes);
+            arr->boxes = NULL;
+        } else {
+            arr->boxes = realloc(arr->boxes, (size_t)arr->size * sizeof(struct box));
+        }
+    }
+}
+
+void free_box_array(struct box_array *arr) {
+    free(arr->boxes);
+    arr->boxes = NULL;
+    arr->size = 0;
+}
+
+int create_box(struct box_array *arr, char* name) {
+    int p;
+    for (p = 0; p < arr->size; p++) {
+        if (arr->boxes[p].id == atoi(name)) {
+            printf("Box with name %s already exists\n", name);
+            return -1;
+        }
+    }
+    increment_box_array(arr);
+    arr->boxes[arr->size - 1].id = atoi(name);
+    printf("New box with name %s created\n", name);
+    return 0;
+}
+
+int delete_box(struct box_array *arr, char* name) {
+    int j,l;
+    for (l = 0; l < arr->size; l++) {
+        if (arr->boxes[l].id == atoi(name)) {
+            for (j = l; j < arr->size - 1; j++) {
+                arr->boxes[j] = arr->boxes[j + 1];
+            }
+            decrement_box_array(arr);
+            printf("Box with name %s deleted\n", name);
+            return 0;
+        }
+    }
+    printf("Box with name %s not found\n", name);
+    return -1;
+}
 
 
 void get_order(int fd){
@@ -47,6 +129,8 @@ void get_order(int fd){
 }
 
 int main(int argc, char **argv) {
+
+    tfs_init(NULL);
     
     if (argc < 3) {
         return -1;
@@ -56,6 +140,9 @@ int main(int argc, char **argv) {
     if(max_sessions <= 0){
        return -1;
     }
+
+    struct box_array boxes_list;
+    create_box_array(&boxes_list, 0);
 
     printf("mbroker.register_pipe = '%s' max_sessions = '%d' \n",register_pipe_name, max_sessions);
 
@@ -76,39 +163,203 @@ int main(int argc, char **argv) {
 
     get_order(fd);
 
-    while (1) {
+    while (s == 1) {
+        
         switch ((int)sv_order_msg[0]){
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
         case 1:
-            int session_pipe_fd = open(session_pipe_name, O_RDONLY);
-            if (session_pipe_fd < 0) {
+            char dir1[33];
+            int x1;
+            int flag_1 = 0;
+            memset(dir1,0,33);
+            memcpy(dir1,"/",sizeof(char));
+            memcpy(dir1+sizeof(char),box_name,sizeof(box_name));
+
+            int session_pipe_1 = open(session_pipe_name, O_RDONLY);
+            if (session_pipe_1 < 0) {
                 printf("Error opening session pipe\n");
             return -1;
             }
-            ssize_t flg = read(session_pipe_fd,msg,1024);
-            if(flg == -1){
+            ssize_t flg_1 = read(session_pipe_1,msg,1024);
+            if(flg_1 == -1){
                 return -1;
             }
             printf("A Mensagem do user foi: %s \n", msg);
+
+            for (x1=0; x1 < boxes_list.size; x1++){
+                if(boxes_list.boxes[x1].id == atoi(box_name)){
+                    flag_1 = 1;
+                }
+            }
+
+            
+            if(flag_1 == 0){
+                printf("Box doesnt exist \n");
+                close(session_pipe_1);
+                unlink(session_pipe_name);
+                return -1;
+            }
+
+            int flg_tfs_open1 = tfs_open(dir1, TFS_O_TRUNC|O_WRONLY);
+            if(flg_tfs_open1 == -1){
+                    printf("Erro ao abrir a caixa no TFS \n");
+                    return -1;
+            }
+
+            int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,msg,sizeof(msg));
+            if(flg_tfs_write1 == -1){
+                    printf("Erro ao escrever na caixa \n");
+                    return -1;
+            }
             break;
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
+        case 2:
+            char msg_sub[1025];
+            char box_msg[1024];
+            char dir2[33];
+            memset(box_msg, 0, sizeof(box_msg));
+            memset(msg_sub, 0, sizeof(msg_sub));
+            memset(dir2,0,33);
+            memcpy(dir2,"/",sizeof(char));
+            memcpy(dir2+sizeof(char),box_name,sizeof(box_name));
+
+            i = 10;
+            int x2;
+            int flag_2 = 0;
+            for (x2=0; x2 < boxes_list.size; x2++){
+                if(boxes_list.boxes[x2].id == atoi(box_name)){
+                    flag_2 = 1;
+                }
+            }
+            if(flag_2 == 0){
+                printf("Box doesnt exist \n");
+                return -1;
+            }
+            int flg_tfs_open2 = tfs_open(dir2, O_RDONLY);
+            if(flg_tfs_open2 == -1){
+                    printf("Erro ao abrir a caixa no TFS \n");
+                    return -1;
+            }
+            int flg_tfs_read = (int)tfs_read(flg_tfs_open2, box_msg, 1024);
+            if(flg_tfs_read == -1){
+                    printf("Erro ao ler a caixa no TFS \n");
+                    return -1;
+            }
+
+            strcpy(msg_sub,msg_to_sub(i, box_msg));
+            int session_pipe_sub = open(session_pipe_name, O_WRONLY);
+            if (session_pipe_sub < 0) {
+                printf("Error opening session pipe\n");
+            return -1;
+            }
+            ssize_t flg2 = write(session_pipe_sub, msg_sub, sizeof(msg_sub));
+            if(flg2 == -1){
+                return -1;
+            }
+            printf("A Mensagem enviada foi: %s \n", msg_sub);
+            break;
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
         case 3:
-            int session_pipe_fd = open(session_pipe_name, O_WRONLY);
-            if (session_pipe_fd < 0) {
+            flag = create_box(&boxes_list,box_name);
+            i = 4;
+            memset(aswser_msg46,0,1029);
+            if(flag == 0){
+                char dir[33];
+
+                memset(dir,0,33);
+                memcpy(dir,"/",sizeof(char));
+                memcpy(dir+sizeof(char),box_name,sizeof(box_name));
+                
+                int flg_tfs = tfs_open(dir, TFS_O_CREAT);
+                if(flg_tfs == -1){
+                    printf("Erro ao criar a caixa no TFS \n");
+                    return -1;
+                }
+            
+                char* error_message = "";
+                strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
+                printf("AQUI: %s \n",aswser_msg46);
+            }
+            if(flag == -1){
+                char* error_message = "Não foi possivel a criação da caixa";
+                strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
+            }
+            int session_pipe_3 = open(session_pipe_name, O_WRONLY);
+            if (session_pipe_3 < 0) {
                 printf("Error opening session pipe\n");
                 return -1;
             }
-            /* POR MUDARRRRR */
-            ssize_t flg = write(session_pipe_fd,msg,1024);
-            if(flg == -1){
+            ssize_t flg_3 = write(session_pipe_3,aswser_msg46,1029);
+            if(flg_3 == -1){
                 return -1;
             }
-            printf("A Mensagem enviada foi: %s \n", msg);
+            printf("A Mensagem enviada foi: %s \n", aswser_msg46);
+            s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
+
             break;
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
+        case 5:
+            flag = delete_box(&boxes_list,box_name);
+            i = 6;
+            memset(aswser_msg46,0,1029);
+            if(flag == 0){
+
+                char dir[sizeof(box_name)+1];
+
+                memset(dir,0,33);
+                memcpy(dir,"/",sizeof(char));
+                memcpy(dir+sizeof(char),box_name,sizeof(box_name));
+                 
+                int flg_tfs = tfs_unlink(dir);
+                if(flg_tfs == -1){
+                    printf("Erro ao apagar caixa no TFS \n");
+                    return -1;
+                }
+
+                char* error_message = "";
+                strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
+                printf("AQUI: %s \n",aswser_msg46);
+            }
+            if(flag == -1){
+                char* error_message = "Não foi possivel a remoção da caixa";
+                strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
+            }
+            int session_pipe_5 = open(session_pipe_name, O_WRONLY);
+            if (session_pipe_5 < 0) {
+                printf("Error opening session pipe\n");
+                return -1;
+            }
+            ssize_t flg_5 = write(session_pipe_5,aswser_msg46,1029);
+            if(flg_5 == -1){
+                return -1;
+            }
+            s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
+            break;
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
+        case 7:
+            break;
+
+        /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
+
         default:
-            break; /*get_order(fd);*/
+            break;
         }
     }
+
+    free_box_array(&boxes_list);
     close(fd);
     unlink(register_pipe_name);
+    tfs_destroy();
     return 0;
 }
 

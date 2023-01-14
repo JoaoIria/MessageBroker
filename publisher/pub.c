@@ -11,7 +11,6 @@ int main(int argc, char **argv) {
 
     /* check for correct number of command line arguments */
     if (argc < 4) {
-        printf("Usage: %s <register_pipe_name> <session_pipe_name> <box_name>\n", argv[0]);
         return -1;
     }
 
@@ -20,6 +19,7 @@ int main(int argc, char **argv) {
     const char* box_name = argv[3];
     __uint8_t i;
 
+    /* print to check all variables */
     printf("mbroker.register_pipe = '%s' session_pipe_name = '%s' box_name = '%s' \n",register_pipe_name, session_pipe_name,box_name);
 
     /* open the register pipe for writing */

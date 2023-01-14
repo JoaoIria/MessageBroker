@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdint.h>
 
 
 char* create_sv_order_msg(__uint8_t i, const char* session_pipe_name, const char* box_name) {
@@ -27,30 +27,54 @@ char* create_sv_order_msg(__uint8_t i, const char* session_pipe_name, const char
     return sv_order_msg;
 }
 
+char* msg_to_sub(__uint8_t i, const char* box_msg){
+    static char msg_to_sub[1025];
+    memset(msg_to_sub, 0, sizeof(msg_to_sub));
 
-char* create_manager_msg_4_6(__uint8_t i, int32_t return_code, const char* error_message) {
-    static char msg[1029];
-    memset(msg, 0, 1029);
-        
     // copy the value of i to the first byte of sv_order_msg
-    memcpy(msg, &i, sizeof(__uint8_t));  
+    memcpy(msg_to_sub, &i, sizeof(__uint8_t)); 
 
     // add a space after i
-    memcpy(msg + sizeof(__uint8_t), " ", sizeof(char));
+    memcpy(msg_to_sub + sizeof(__uint8_t), " ", sizeof(char)); 
 
-    // add return_code
-    memcpy(msg + sizeof(__uint8_t) + sizeof(char), &return_code, sizeof(return_code));  
+    // add session_pipe_name
+    memcpy(msg_to_sub + sizeof(__uint8_t) + sizeof(char), box_msg, strlen(box_msg));
 
-    // add a space after return_code
-    memcpy(msg + sizeof(__uint8_t) + sizeof(char) + sizeof(return_code), " ", sizeof(char)); 
-
-    // add error message
-    memcpy(msg + sizeof(__uint8_t) + sizeof(char) * 2 + sizeof(return_code), error_message, sizeof(char) * strlen(error_message)); 
-
-    // add null terminator
-    msg[sizeof(__uint8_t) + sizeof(char) * 2 + sizeof(return_code) + strlen(error_message)] = '\0'; 
-    return msg;
-
+    msg_to_sub[sizeof(__uint8_t) + sizeof(char) * 2 + strlen(box_msg)] = '\0'; 
+    return msg_to_sub;
 }
 
+char* create_manager_msg_4_6(__uint8_t code, int32_t return_code, char* error_message) {
+    static char array[1050];
+    memset(array, 0, sizeof(array));
+    char temp[50];
+    // copy the value of code to the first byte of array
+    memcpy(array, &code, sizeof(__uint8_t));
+    // add a space after code
+    memcpy(array + sizeof(__uint8_t), " ", sizeof(char));
 
+    // add the return_code
+    int offset = sizeof(__uint8_t) + sizeof(char);
+    if(return_code < 0) {
+        sprintf(temp,"-%d", -return_code);
+    } else {
+        sprintf(temp,"%d", return_code);
+    }
+    memcpy(array + offset, temp, strlen(temp));
+    offset += (int)strlen(temp);
+    // add a space after return_code
+    memcpy(array + offset, " ", sizeof(char));
+
+    // add error_message
+    offset += (int)sizeof(char);
+    if(return_code == -1) {
+        memcpy(array + offset, error_message, strlen(error_message));
+        offset += (int)strlen(error_message);
+    } else {
+        memcpy(array + offset, "\0", sizeof(char));
+        offset += 1;
+    }
+    // add null terminator
+    array[offset] = '\0';
+    return array;
+}
