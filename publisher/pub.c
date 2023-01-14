@@ -80,21 +80,26 @@ int main(int argc, char **argv) {
     }
     /* publisher can now write messages to the session pipe */
 
-    char msg[1024];
+    char msg[1026];
     i = 9;
 
     while(1){
+        memset(msg, 0, sizeof(msg));
         printf("Enter the message to publish:");
         if (fgets(msg, 1024, stdin) == NULL || feof(stdin)) {
-            printf("\nEOF reached, closing session and pipe...\n");
+            printf("\nEOF reached, closing session and pipe...\n"); /* Quando fazemos cntr d ele repete a ultima impressao*/
             close(session_pipe_fd);
-            return 0;
+            return -1;
         }
-        int len = (int)strlen(msg);
+        size_t len = strlen(msg);
         if (len > 0 && msg[len-1] == '\n') {
             msg[len-1] = '\0';
         }
-        ssize_t flg2 = write(session_pipe_fd, msg, sizeof(msg));
+        memmove(msg + 2, msg, len + 1);
+        msg[0] = (char)(i + '0');
+        msg[1] = ' ';
+        len += 2;
+        ssize_t flg2 = write(session_pipe_fd, msg, len);
         if(flg2 == -1){
             return -1;
         }
