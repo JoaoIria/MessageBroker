@@ -68,6 +68,7 @@ int main(int argc, char **argv) {
         if (fgets(msg, 1024, stdin) == NULL || feof(stdin)) {
             printf("\nEOF reached, closing session and pipe...\n"); /* Quando fazemos cntr d ele repete a ultima impressao*/
             close(session_pipe_fd);
+            unlink(session_pipe_name);
             return -1;
         }
         size_t len = strlen(msg);

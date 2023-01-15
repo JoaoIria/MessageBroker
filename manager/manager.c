@@ -96,7 +96,6 @@ int main(int argc, char **argv) {
         if(flg == -1){
             return -1;
         }
-        printf("codigo: %d \n",msg[0]);
         printf("A Mensagem recebida foi: %s \n",msg);
         break;
     }

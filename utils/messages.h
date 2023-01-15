@@ -29,7 +29,7 @@ char* create_sv_order_msg(__uint8_t i, const char* session_pipe_name, const char
 
 char* msg_to_sub(__uint8_t i, const char* box_msg){
     static char msg_to_sub[1025];
-    memset(msg_to_sub, 0, sizeof(msg_to_sub));
+    memset(msg_to_sub, 0, 1025);
 
     // copy the value of i to the first byte of sv_order_msg
     memcpy(msg_to_sub, &i, sizeof(__uint8_t)); 
@@ -40,7 +40,7 @@ char* msg_to_sub(__uint8_t i, const char* box_msg){
     // add session_pipe_name
     memcpy(msg_to_sub + sizeof(__uint8_t) + sizeof(char), box_msg, strlen(box_msg));
 
-    msg_to_sub[sizeof(__uint8_t) + sizeof(char) * 2 + strlen(box_msg)] = '\0'; 
+    msg_to_sub[sizeof(__uint8_t) + sizeof(char) + strlen(box_msg)] = '\0'; 
     return msg_to_sub;
 }
 

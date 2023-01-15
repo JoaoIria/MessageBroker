@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     }
 
     /* open the session pipe for writing */ 
-    int session_pipe_fd = open(session_pipe_name, O_WRONLY);
+    int session_pipe_fd = open(session_pipe_name, O_RDONLY);
     /* check for error opening the session pipe */
     if (session_pipe_fd < 0) {
         printf("Error opening session pipe\n");
@@ -99,16 +99,16 @@ int main(int argc, char **argv) {
     }
 
     char msg[1024];
-    char *token;
     while(1){
         ssize_t flg2 = read(session_pipe_fd, msg, 1024);
-        if(flg2 == -1){
-            return -1;
+        if(flg2 <= 0){
+            perror("Error reading from session pipe");
+            break;
+            }
+        else if (flg2 > 0) {
+            printf("Mensagem presente na caixa: '%s' \n", msg);
+            break;
         }
-        token = strtok(msg," ");
-        token = strtok(NULL, " "); // skipping the first token
-        strcpy(msg, token);
-        printf("Mensagem requisitada: '%s' \n", token);
     }
     close(session_pipe_fd);
     unlink(session_pipe_name);

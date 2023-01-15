@@ -242,58 +242,63 @@ int main(int argc, char **argv) {
                         printf("Error opening session pipe\n");
                     return -1;
                     }
-                    ssize_t flg_1 = read(session_pipe_1,msg,1024);
-                    if(flg_1 == -1){
-                        return -1;
-                    }
-                    printf("A Mensagem do user foi: %s \n", msg);
+                    while(1){
+                        ssize_t flg_1 = read(session_pipe_1,msg,1024);
+                        if(flg_1 <= 0){
+                            perror("Error reading from session pipe");
+                            break;
+                        }
+                        else{
+                            printf("A Mensagem do user foi: %s \n", msg);
 
-                    for (x1=0; x1 < boxes_list.size; x1++){
-                        if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
-                            if(boxes_list.boxes[x1].pub_num == 0){
-                                flag_1 = 1;
+                            for (x1=0; x1 < boxes_list.size; x1++){
+                                if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
+                                    if(boxes_list.boxes[x1].pub_num == 0){
+                                        flag_1 = 1;
+                                    }
+                                }
                             }
+
+                            char new_msg[1024];
+                            memset(new_msg,0,1024);
+                            strcpy(new_msg,msg_pub(msg));
+                            
+                            if(flag_1 == 0){
+                                printf("Box does not exist or have already a publisher \n");
+                                close(session_pipe_1);
+                                unlink(session_pipe_name);
+                                return -1;
+                            }
+
+                            int flg_tfs_open1 = tfs_open(dir1, TFS_O_APPEND|O_WRONLY);
+                            if(flg_tfs_open1 == -1){
+                                    printf("Erro ao abrir a caixa no TFS \n");
+                                    return -1;
+                            }
+
+                            int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,new_msg,sizeof(new_msg));
+                            for (x1=0; x1 < boxes_list.size; x1++){
+                                if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
+                                    boxes_list.boxes[x1].size += (uint64_t)strlen(new_msg);
+                                    boxes_list.boxes[x1].pub_num = 1;
+                                }
+                            }
+                            if(flg_tfs_write1 == -1){
+                                    printf("Erro ao escrever na caixa \n");
+                                    return -1;
+                            }
+                        tfs_close(flg_tfs_open1);
                         }
                     }
-
-                    char new_msg[1024];
-                    memset(new_msg,0,1024);
-                    strcpy(new_msg,msg_pub(msg));
-                    
-                    if(flag_1 == 0){
-                        printf("Box does not exist or have already a publisher \n");
-                        close(session_pipe_1);
-                        unlink(session_pipe_name);
-                        return -1;
-                    }
-
-                    int flg_tfs_open1 = tfs_open(dir1, TFS_O_APPEND|O_WRONLY);
-                    if(flg_tfs_open1 == -1){
-                            printf("Erro ao abrir a caixa no TFS \n");
-                            return -1;
-                    }
-
-                    int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,new_msg,sizeof(new_msg));
-                    for (x1=0; x1 < boxes_list.size; x1++){
-                        if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
-                            boxes_list.boxes[x1].size += (uint64_t)strlen(new_msg);
-                            boxes_list.boxes[x1].pub_num = 1;
-                        }
-                    }
-                    if(flg_tfs_write1 == -1){
-                            printf("Erro ao escrever na caixa \n");
-                            return -1;
-                    }
-
-                    close(session_pipe_1);
-                    tfs_close(flg_tfs_open1);
-                    unlink(session_pipe_name);
-                    break;
+                close(session_pipe_1);
+                unlink(session_pipe_name);
+                break;
 
                 /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
 
                 case 2:
-                    char msg_sub[1025];
+                    printf("1 \n");
+                    char msg_sub[1028];
                     char box_msg[1024];
                     char dir2[33];
                     memset(box_msg, 0, sizeof(box_msg));
@@ -311,35 +316,43 @@ int main(int argc, char **argv) {
                             break;
                         }
                     }
+                    
                     if(flag_2 == 0){
                         printf("Box doesnt exist \n");
                         return -1;
                     }
+                    
                     int flg_tfs_open2 = tfs_open(dir2, O_RDONLY);
                     if(flg_tfs_open2 == -1){
                             printf("Erro ao abrir a caixa no TFS \n");
                             return -1;
                     }
+
                     int flg_tfs_read = (int)tfs_read(flg_tfs_open2, box_msg, 1024);
                     if(flg_tfs_read == -1){
                             printf("Erro ao ler a caixa no TFS \n");
                             return -1;
                     }
 
-                    strcpy(msg_sub,msg_to_sub(i, box_msg));
+                    sprintf(msg_sub,"%d %s",i,box_msg);
+                    /*strcpy(msg_sub,msg_to_sub(i, box_msg));*/
+                    printf("Mensagem inicial: %d %s \n",i,box_msg);
+                    printf("Mensagem construida: %s \n",msg_sub);
+
 
                     int session_pipe_sub = open(session_pipe_name, O_WRONLY);
                     if (session_pipe_sub < 0) {
                         printf("Error opening session pipe\n");
                     return -1;
                     }
+
                     ssize_t flg2 = write(session_pipe_sub, msg_sub, sizeof(msg_sub));
                     if(flg2 == -1){
                         return -1;
                     }
                     
                     boxes_list.boxes[x2].sub_num += 1;
-                    printf("A Mensagem enviada foi: %s \n", msg_sub);
+                    printf("A Mensagem enviada foi (AQUI): %s \n", msg_sub);
                     
                     close(session_pipe_sub);
                     tfs_close(flg_tfs_open2);
@@ -455,7 +468,6 @@ int main(int argc, char **argv) {
                         break;
                     }
                     for (y = 0; y < boxes_list.size; y++){
-                        memset(aswser_msg8, 0, 58);
                         if(fd_7 < 0){
                             printf("Error opening session pipe\n");
                             close(fd_7);
@@ -467,7 +479,7 @@ int main(int argc, char **argv) {
                         else{
                             last = 0;
                         }
-                        strcpy(aswser_msg8, msg_list(i, last, box_name, boxes_list.boxes[y].size, boxes_list.boxes[y].pub_num, boxes_list.boxes[y].sub_num));
+                        sprintf(aswser_msg8, "%u %u %s %lu %lu %lu", i, last, boxes_list.boxes[y].id, boxes_list.boxes[y].size, boxes_list.boxes[y].pub_num, boxes_list.boxes[y].sub_num);
                         if(write(fd_7, aswser_msg8, sizeof(aswser_msg8)) == -1){
                             close(fd_7);
                             return -1;
