@@ -78,3 +78,92 @@ char* create_manager_msg_4_6(__uint8_t code, int32_t return_code, char* error_me
     array[offset] = '\0';
     return array;
 }
+
+
+char* msg_pub(char* box_msg){
+    /* Declare a static buffer named msg_pub with a fixed size of 1024 */
+    static char msg_pub[1024];
+    /* Clear the buffer by setting all its elements to 0 */
+    memset(msg_pub, 0, 1024);
+    /* Search for the first space character in the box_msg string using strstr */
+    char * ptr = strstr(box_msg, " ");
+    /* Copy the string starting from the character after the space into the msg_pub buffer */
+    strcpy(msg_pub,ptr+1);
+    /* Return the msg_pub buffer */
+    return msg_pub;
+}
+
+
+char* msg_list(__uint8_t i, __uint8_t last, char box_name[32], uint64_t box_size, __uint64_t n_publishers , __uint64_t n_subscribers){
+    /* Declare a static buffer named msg_list with a fixed size of 58 */
+    static char msg_list[58];
+
+    /* Clear the buffer with memset */
+    memset(msg_list, 0, sizeof(msg_list));
+
+    /* Copy the code value to the first byte of the buffer with memcpy */
+    memcpy(msg_list, &i, sizeof(i));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i)] = ' ';
+
+    /* Copy the last value to the second byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + 1, &last, sizeof(last));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i) + sizeof(last) + 1] = ' ';
+
+    /* Copy the box_name value to the third byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + sizeof(last) + 2, &box_name, strlen(box_name));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i) + sizeof(last) + strlen(box_name) + 2] = ' ';
+
+    /* Copy the box_size value to the 35th byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + sizeof(last) + strlen(box_name) + 3, &box_size, sizeof(box_size));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i) + sizeof(last) + strlen(box_name) + sizeof(box_size) + 3] = ' ';
+
+    /* Copy the n_publishers value to the 43th byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + sizeof(last) + strlen(box_name) + sizeof(box_size) + 4, &n_publishers, sizeof(n_publishers));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i) + sizeof(last) + strlen(box_name) + sizeof(box_size) + sizeof(n_publishers) + 4] = ' ';
+
+    /* Copy the n_subscribers value to the 51th byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + sizeof(last) + strlen(box_name) + sizeof(box_size) + sizeof(n_publishers) + 5, &n_subscribers, sizeof(n_subscribers));
+
+    /* Return the msg_list buffer */
+    return msg_list;
+}
+
+
+char* msg_list_null(__uint8_t i, __uint8_t last, char box_name[32]){
+    /* Declare a static buffer named msg_list with a fixed size of 58 */
+    static char msg_list[58];
+
+    /* Clear the buffer with memset */
+    memset(msg_list, 0, sizeof(msg_list));
+
+    /* Copy the code value to the first byte of the buffer with memcpy */
+    memcpy(msg_list, &i, sizeof(i));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i)] = ' ';
+
+    /* Copy the last value to the second byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + 1, &last, sizeof(last));
+
+    /* Add a space to the buffer*/
+    msg_list[sizeof(i) + sizeof(last) + 1] = ' ';
+
+    /* Copy the box_name value to the third byte of the buffer with memcpy */
+    memcpy(msg_list + sizeof(i) + sizeof(last) + 2, &box_name, strlen(box_name));
+
+    /* Return the msg_list buffer */
+    return msg_list;
+}
+
+
+

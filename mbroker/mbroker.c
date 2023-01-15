@@ -14,8 +14,9 @@
 
 typedef struct box{
     int id;
-    int pub_num;
-    int sub_num;
+    uint64_t size;
+    uint64_t pub_num;
+    uint64_t sub_num;
 }Box;
 
 struct box_array{
@@ -104,6 +105,18 @@ int delete_box(struct box_array *arr, char* name) {
     return -1;
 }
 
+void sort_boxes(struct box_array *arr) {
+    int u, t;
+    for (u = 0; u < arr->size - 1; u++) {
+        for (t = 0; t < arr->size - u - 1; t++) {
+            if (arr->boxes[t].id > arr->boxes[t + 1].id) {
+                struct box temp = arr->boxes[t];
+                arr->boxes[t] = arr->boxes[t + 1];
+                arr->boxes[t + 1] = temp;
+            }
+        }
+    }
+}
 
 void get_order(int fd){
     memset(sv_order_msg,0,sizeof(sv_order_msg));
@@ -121,11 +134,18 @@ void get_order(int fd){
     printf("A mensagem enviada para o mbroker foi: %s\n", sv_order_msg);
     printf("res: %i\n", (int)sv_order_msg[0]);
 
+    if(sv_order_msg[0] != 7){
     token = strtok(sv_order_msg," ");
     token = strtok(NULL, " "); // skipping the first token
     strcpy(session_pipe_name, token);
     token = strtok(NULL, " ");
     strcpy(box_name, token);
+    }
+    if(sv_order_msg[0] == 7){
+    token = strtok(sv_order_msg," ");
+    token = strtok(NULL, " "); // skipping the first token
+    strcpy(session_pipe_name, token);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -194,6 +214,9 @@ int main(int argc, char **argv) {
                 }
             }
 
+            char new_msg[1024];
+            memset(new_msg,0,1024);
+            strcpy(new_msg,msg_pub(msg));
             
             if(flag_1 == 0){
                 printf("Box doesnt exist \n");
@@ -208,11 +231,19 @@ int main(int argc, char **argv) {
                     return -1;
             }
 
-            int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,msg,sizeof(msg));
+            int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,new_msg,sizeof(new_msg));
+            for (x1=0; x1 < boxes_list.size; x1++){
+                if(boxes_list.boxes[x1].id == atoi(box_name)){
+                    boxes_list.boxes[x1].size += (uint64_t)strlen(new_msg);
+                }
+            }
             if(flg_tfs_write1 == -1){
                     printf("Erro ao escrever na caixa \n");
                     return -1;
             }
+
+            close(session_pipe_1);
+            tfs_close(flg_tfs_open1);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -261,6 +292,9 @@ int main(int argc, char **argv) {
                 return -1;
             }
             printf("A Mensagem enviada foi: %s \n", msg_sub);
+            
+            close(session_pipe_sub);
+            tfs_close(flg_tfs_open2);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -301,7 +335,7 @@ int main(int argc, char **argv) {
             }
             printf("A Mensagem enviada foi: %s \n", aswser_msg46);
             s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
-
+            close(session_pipe_3);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -342,11 +376,59 @@ int main(int argc, char **argv) {
                 return -1;
             }
             s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
+            close(session_pipe_5);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
 
         case 7:
+            int y;
+            uint8_t last;
+            char temp_box_n[32];
+            memset(temp_box_n, 0, 32);
+            memset(aswser_msg8, 0, 58);
+            int fd_7 = open(session_pipe_name, O_WRONLY);
+            i = 8;
+            if (boxes_list.size == 0){
+                printf("session pipe: %s \n",session_pipe_name);
+                last = 1;
+                if(fd_7 < 0){
+                    printf("Error opening session pipe %s \n",session_pipe_name);
+                    close(fd_7);
+                    return -1;
+                }
+                strcpy(aswser_msg8, msg_list_null(i, last, temp_box_n));
+                ssize_t flg_7 = write(fd_7, aswser_msg8, sizeof(aswser_msg8));
+                if(flg_7 == -1){
+                    close(fd_7);
+                    return -1;
+                }
+                printf("Mensagem enviada:  CODE(%d) LAST(%d) \n",aswser_msg8[0],aswser_msg8[2]);
+                close(fd_7);
+                s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
+                break;
+            }
+            for (y = 0; y < boxes_list.size; y++){
+                memset(aswser_msg8, 0, 58);
+                if(fd_7 < 0){
+                    printf("Error opening session pipe\n");
+                    close(fd_7);
+                    return -1;
+                }
+                if(y == boxes_list.size-1){
+                    last = 1;
+                }
+                else{
+                    last = 0;
+                }
+                strcpy(aswser_msg8, msg_list(i, last, box_name, boxes_list.boxes[y].size, boxes_list.boxes[y].pub_num, boxes_list.boxes[y].sub_num));
+                if(write(fd_7, aswser_msg8, sizeof(aswser_msg8)) == -1){
+                    close(fd_7);
+                    return -1;
+                }
+            }
+            s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
+            close(fd_7);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/

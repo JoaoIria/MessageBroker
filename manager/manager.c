@@ -17,14 +17,17 @@
 int main(int argc, char **argv) {
 
     /* check for correct number of command line arguments */
-    if (argc < 5) {
+    if (argc < 4) {
         return -1;
     }
 
     const char* register_pipe_name = argv[1];
     const char* session_pipe_name = argv[2];
     const char* action = argv[3];
-    const char* box_name = argv[4];
+    const char* box_name = "";
+    if(argc == 5){
+        box_name = argv[4];
+    }
     __uint8_t i;
     int bytes_msg,flag = 1;
 
@@ -56,7 +59,7 @@ int main(int argc, char **argv) {
         bytes_msg = 58;
     }
     if(flag == 1){
-        printf("Action unknown:_'%s'\n",action);
+        printf("Action unknown: '%s'\n",action);
         return -1;
     }
     
