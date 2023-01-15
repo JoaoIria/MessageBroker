@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 typedef struct box{
-    int id;
+    char id[32];
     uint64_t size;
     uint64_t pub_num;
     uint64_t sub_num;
@@ -78,13 +78,13 @@ void free_box_array(struct box_array *arr) {
 int create_box(struct box_array *arr, char* name) {
     int p;
     for (p = 0; p < arr->size; p++) {
-        if (arr->boxes[p].id == atoi(name)) {
+        if (strcmp(arr->boxes[p].id, name) == 0) {
             printf("Box with name %s already exists\n", name);
             return -1;
         }
     }
     increment_box_array(arr);
-    arr->boxes[arr->size - 1].id = atoi(name);
+    strcpy(arr->boxes[arr->size - 1].id, name);
     printf("New box with name %s created\n", name);
     return 0;
 }
@@ -92,7 +92,7 @@ int create_box(struct box_array *arr, char* name) {
 int delete_box(struct box_array *arr, char* name) {
     int j,l;
     for (l = 0; l < arr->size; l++) {
-        if (arr->boxes[l].id == atoi(name)) {
+        if (strcmp(arr->boxes[l].id, name) == 0) {
             for (j = l; j < arr->size - 1; j++) {
                 arr->boxes[j] = arr->boxes[j + 1];
             }
@@ -109,7 +109,7 @@ void sort_boxes(struct box_array *arr) {
     int u, t;
     for (u = 0; u < arr->size - 1; u++) {
         for (t = 0; t < arr->size - u - 1; t++) {
-            if (arr->boxes[t].id > arr->boxes[t + 1].id) {
+            if (strcmp(arr->boxes[t].id, arr->boxes[t + 1].id) > 0) {
                 struct box temp = arr->boxes[t];
                 arr->boxes[t] = arr->boxes[t + 1];
                 arr->boxes[t + 1] = temp;
@@ -209,8 +209,10 @@ int main(int argc, char **argv) {
             printf("A Mensagem do user foi: %s \n", msg);
 
             for (x1=0; x1 < boxes_list.size; x1++){
-                if(boxes_list.boxes[x1].id == atoi(box_name)){
-                    flag_1 = 1;
+                if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
+                    if(boxes_list.boxes[x1].pub_num == 0){
+                        flag_1 = 1;
+                    }
                 }
             }
 
@@ -219,13 +221,13 @@ int main(int argc, char **argv) {
             strcpy(new_msg,msg_pub(msg));
             
             if(flag_1 == 0){
-                printf("Box doesnt exist \n");
+                printf("Box does not exist or have already a publisher \n");
                 close(session_pipe_1);
                 unlink(session_pipe_name);
                 return -1;
             }
 
-            int flg_tfs_open1 = tfs_open(dir1, TFS_O_TRUNC|O_WRONLY);
+            int flg_tfs_open1 = tfs_open(dir1, TFS_O_APPEND|O_WRONLY);
             if(flg_tfs_open1 == -1){
                     printf("Erro ao abrir a caixa no TFS \n");
                     return -1;
@@ -233,8 +235,9 @@ int main(int argc, char **argv) {
 
             int flg_tfs_write1 = (int)tfs_write(flg_tfs_open1,new_msg,sizeof(new_msg));
             for (x1=0; x1 < boxes_list.size; x1++){
-                if(boxes_list.boxes[x1].id == atoi(box_name)){
+                if(strcmp(boxes_list.boxes[x1].id,box_name)==0){
                     boxes_list.boxes[x1].size += (uint64_t)strlen(new_msg);
+                    boxes_list.boxes[x1].pub_num = 1;
                 }
             }
             if(flg_tfs_write1 == -1){
@@ -244,6 +247,7 @@ int main(int argc, char **argv) {
 
             close(session_pipe_1);
             tfs_close(flg_tfs_open1);
+            unlink(session_pipe_name);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -262,8 +266,9 @@ int main(int argc, char **argv) {
             int x2;
             int flag_2 = 0;
             for (x2=0; x2 < boxes_list.size; x2++){
-                if(boxes_list.boxes[x2].id == atoi(box_name)){
+                if(strcmp(boxes_list.boxes[x2].id,box_name)==0){
                     flag_2 = 1;
+                    break;
                 }
             }
             if(flag_2 == 0){
@@ -282,6 +287,7 @@ int main(int argc, char **argv) {
             }
 
             strcpy(msg_sub,msg_to_sub(i, box_msg));
+
             int session_pipe_sub = open(session_pipe_name, O_WRONLY);
             if (session_pipe_sub < 0) {
                 printf("Error opening session pipe\n");
@@ -291,10 +297,13 @@ int main(int argc, char **argv) {
             if(flg2 == -1){
                 return -1;
             }
+            
+            boxes_list.boxes[x2].sub_num += 1;
             printf("A Mensagem enviada foi: %s \n", msg_sub);
             
             close(session_pipe_sub);
             tfs_close(flg_tfs_open2);
+            unlink(session_pipe_name);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -335,6 +344,7 @@ int main(int argc, char **argv) {
             printf("A Mensagem enviada foi: %s \n", aswser_msg46);
             s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
             close(session_pipe_3);
+            unlink(session_pipe_name);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -375,6 +385,7 @@ int main(int argc, char **argv) {
             }
             s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
             close(session_pipe_5);
+            unlink(session_pipe_name);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/
@@ -427,6 +438,7 @@ int main(int argc, char **argv) {
             }
             s = 0; /* APENAS ENQUANTO O LOOP TEM AVARIA */
             close(fd_7);
+            unlink(session_pipe_name);
             break;
 
         /* ---------------------------------------------- LINHA APENAS PARA AJUDA VISUAL -------------------------------------------------*/

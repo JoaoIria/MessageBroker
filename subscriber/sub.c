@@ -1,11 +1,39 @@
 #include "logging.h"
 #include "messages.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
+
+
+/* FUNÇÃO RETIRADA DE LAB_SIGNALS - https://github.com/tecnico-so/lab_signals/blob/main/src/intquit.c */
+
+static void sig_handler(int sig) {
+  static int count = 0;
+
+  // UNSAFE: This handler uses non-async-signal-safe functions (printf(),
+  // exit();)
+  if (sig == SIGINT) {
+    // In some systems, after the handler call the signal gets reverted
+    // to SIG_DFL (the default action associated with the signal).
+    // So we set the signal handler back to our function after each trap.
+    //
+    if (signal(SIGINT, sig_handler) == SIG_ERR) {
+      exit(EXIT_FAILURE);
+    }
+    count++;
+    fprintf(stderr, "Caught SIGINT (%d)\n", count);
+    return; // Resume execution at point of interruption
+  }
+
+  // Must be SIGQUIT - print a message and terminate the process
+  fprintf(stderr, "Caught SIGQUIT - that's all folks!\n");
+  exit(EXIT_SUCCESS);
+}
 
 
 int main(int argc, char **argv) {
@@ -42,10 +70,14 @@ int main(int argc, char **argv) {
     if(flg1 == -1){
         return -1;
     }
+
+    /* Close the register pipe */
     close(register_pipe_fd);
 
+    /* Unlink the session pipe */
     unlink(session_pipe_name);
 
+    /* Create a named pipe for the session */
     if (mkfifo(session_pipe_name, 0666) < 0) {
         printf("Error creating session pipe\n"); 
         return -1;
@@ -59,7 +91,12 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    /* subscriber can now read messages from session pipe */
+    if (signal(SIGINT, sig_handler) == SIG_ERR) {
+        exit(EXIT_FAILURE);
+    }
+    if (signal(SIGQUIT, sig_handler) == SIG_ERR) {
+        exit(EXIT_FAILURE);
+    }
 
     char msg[1024];
     char *token;
