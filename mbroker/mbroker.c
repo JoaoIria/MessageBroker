@@ -318,7 +318,6 @@ int main(int argc, char **argv) {
             
                 char* error_message = "";
                 strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
-                printf("AQUI: %s \n",aswser_msg46);
             }
             if(flag == -1){
                 char* error_message = "Não foi possivel a criação da caixa";
@@ -360,7 +359,6 @@ int main(int argc, char **argv) {
 
                 char* error_message = "";
                 strcpy(aswser_msg46,create_manager_msg_4_6(i,flag,error_message));
-                printf("AQUI: %s \n",aswser_msg46);
             }
             if(flag == -1){
                 char* error_message = "Não foi possivel a remoção da caixa";
