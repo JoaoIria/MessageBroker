@@ -10,7 +10,7 @@
 #include <signal.h>
 
 
-/* FUNÇÃO RETIRADA DE LAB_SIGNALS - https://github.com/tecnico-so/lab_signals/blob/main/src/intquit.c */
+/* FUNCTION REMOVED FROM LAB_SIGNALS - https://github.com/tecnico-so/lab_signals/blob/main/src/intquit.c */
 
 static void sig_handler(int sig) {
   static int count = 0;
