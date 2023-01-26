@@ -5,7 +5,7 @@
 
 Project made with **[João Iria](https://github.com/JoaoIria)**.
 
-<sub>*The project is not finished.*</sub>
+<sub>*Reminder: The project is not finished.*</sub>
 
 ###### About the program:
 
